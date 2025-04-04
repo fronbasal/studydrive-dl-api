@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShitDrive - StudyDrive Document Proxy</title>
+    <meta name="description" content="Access StudyDrive documents easily">
+
+    <!-- Modern CSS Reset + Tailwind-like Utility Classes -->
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --color-primary: #4f46e5;
+            --color-primary-hover: #4338ca;
+            --color-text: #111827;
+            --color-text-light: #6b7280;
+            --color-bg: #ffffff;
+            --color-bg-offset: #f9fafb;
+            --color-border: #e5e7eb;
+            --color-error: #ef4444;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --radius: 0.5rem;
+            --transition: 200ms ease-in-out;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-primary: #6366f1;
+                --color-primary-hover: #818cf8;
+                --color-text: #f9fafb;
+                --color-text-light: #9ca3af;
+                --color-bg: #111827;
+                --color-bg-offset: #1f2937;
+                --color-border: #374151;
+                --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+            }
+        }
+
+        html, body {
+            height: 100%;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            color: var(--color-text);
+            background-color: var(--color-bg);
+            line-height: 1.5;
+        }
+
+        g
+        .container {
+            width: 100%;
+            max-width: 480px;
+            padding: 1rem;
+            margin: 0 auto;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .flex-col {
+            flex-direction: column;
+        }
+
+        .flex-row {
+            flex-direction: row;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .justify-center {
+            justify-content: center;
+        }
+
+        .min-h-full {
+            min-height: 100%;
+        }
+
+        g
+        .text-center {
+            text-align: center;
+        }
+
+        .text-2xl {
+            font-size: 1.5rem;
+            line-height: 2rem;
+        }
+
+        .text-4xl {
+            font-size: 2.25rem;
+            line-height: 2.5rem;
+        }
+
+        .text-gray {
+            color: var(--color-text-light);
+        }
+
+        .font-bold {
+            font-weight: 700;
+        }
+
+        .mb-2 {
+            margin-bottom: 0.5rem;
+        }
+
+        .mb-4 {
+            margin-bottom: 1rem;
+        }
+
+        .mb-8 {
+            margin-bottom: 2rem;
+        }
+
+        .mt-2 {
+            margin-top: 0.5rem;
+        }
+
+        g
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .input {
+            display: block;
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            font-size: 1rem;
+            transition: border-color var(--transition), box-shadow var(--transition);
+        }
+
+        .input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color var(--transition), transform var(--transition);
+        }
+
+        .btn:hover {
+            background-color: var(--color-primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background-color: #9CA3AF; g
+            color: #F9FAFB;       g
+            cursor: not-allowed;   g
+            opacity: 0.7;          g
+            transform: none;      g
+        }
+
+        .btn:disabled:hover {
+            background-color: #9CA3AF; g
+            transform: none;           g
+        }
+
+        .btn:disabled:active {
+            transform: none;           g
+        }
+
+        .error-text {
+            color: var(--color-error);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+
+        .input-error {
+            border-color: var(--color-error);
+        }
+
+        .input-error:focus {
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+        }
+
+        a {
+            color: #007bff; g
+            text-decoration: none; g
+            transition: color 0.05s; g
+        }
+
+        a:hover {
+            color: #0056b3; g
+        }
+
+        g
+        a:active {
+            color: #cc3300; g
+        }
+
+        g
+        .card {
+            background-color: var(--color-bg-offset);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            width: 100%;
+        }
+
+        g
+        @media (min-width: 640px) {
+            .container {
+                padding: 2rem;
+            }
+
+            .card {
+                padding: 1.75rem;
+                max-width: 64rem;
+            }
+        }
+
+        g
+        .logo {
+            animation: pulse 3s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.8;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0.8;
+            }
+        }
+
+
+        g
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;  g
+            height: 24px; g
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px; g
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px; 
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--color-primary);
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px var(--color-primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px); 
+        }
+
+        .form-group.inline-switch {
+            flex-direction: row;
+            align-items: center; 
+        }
+
+        .form-group.inline-switch > label {
+            margin-bottom: 0; 
+            margin-right: 1rem;
+        }
+    </style>
+</head>
+<body class="min-h-full flex flex-col items-center justify-center">
+<div class="container">
+    <div class="card">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold mb-2 logo">ShitDrive</h1>
+            <p class="text-gray">Fast StudyDrive document proxy</p>
+        </div>
+
+        <form id="documentForm">
+            <div class="form-group">
+                <label for="studydriveUrl" class="mb-2">StudyDrive Document URL</label>
+                <input
+                        type="url"
+                        id="studydriveUrl"
+                        name="studydriveUrl"
+                        class="input"
+                        placeholder="https://www.studydrive.net/de/doc/example/123456"
+                        autocomplete="off"
+                        required
+                        autofocus
+                >
+                <div id="urlError" class="error-text">Please enter a valid StudyDrive URL</div>
+            </div>
+
+            <div class="form-group inline-switch">
+                <label for="download">Download?</label>
+                <label class="switch">
+                    <input type="checkbox" id="download" name="download">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <button type="submit" class="btn w-100" id="submitButton">View Document</button>
+        </form>
+
+        <div class="mt-2 text-gray">
+            <small>Download and view StudyDrive documents without obstacles. <a href="/docs">OpenAPI spec</a>.</small>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('documentForm');
+        const submitButton = document.getElementById('submitButton');
+        const urlInput = document.getElementById('studydriveUrl');
+        const urlError = document.getElementById('urlError');
+        const downloadCheckbox = document.getElementById('download');
+        const urlPattern = /^https?:\/\/(?:www\.)?studydrive\.net\/([a-z]{2})\/doc\/([^\/]+)\/(\d+)/;
+
+        function downloadFile(url) {
+            const link = document.createElement('a');
+            link.href = url + '&download=true';
+            link.setAttribute('download', '');
+            document.body.appendChild(link);
+
+            link.click();
+
+            link.parentNode.removeChild(link);
+        }
+
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            submitButton.disabled = true;
+
+            const url = urlInput.value.trim();
+            const match = url.match(urlPattern);
+            const download = downloadCheckbox.checked;
+
+            if (!match) {
+                urlInput.classList.add('input-error');
+                urlError.style.display = 'block';
+                submitButton.disabled = false;
+                return;
+            }
+
+            const [docName, id] = match.slice(2);
+
+            let apiUrl = `/doc/${docName}/${id}`;
+
+            if (!download) {
+                window.location.href = apiUrl;
+                return;
+            }
+
+            downloadFile(apiUrl);
+
+            form.reset();
+            submitButton.disabled = false; 
+        });
+
+        urlInput.addEventListener('input', function() {
+            urlInput.classList.remove('input-error');
+            urlError.style.display = 'none';
+            submitButton.disabled = false;
+        });
+    });
+</script>
+</body>
+</html>

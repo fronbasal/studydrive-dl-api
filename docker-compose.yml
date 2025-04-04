@@ -1,0 +1,15 @@
+services:
+  api:
+    image: studydrive-dl-api
+    container_name: studydrive-dl-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8040:8000"
+    volumes:
+      - /run/redis/redis.sock:/var/run/redis/redis.sock
+    environment:
+      - STUDYDRIVE_REDIS_URL=unix:///var/run/redis/redis.sock?db=6
+    env_file:
+      - .env
