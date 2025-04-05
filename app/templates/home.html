@@ -167,23 +167,6 @@
             transform: translateY(0);
         }
 
-        .btn:disabled {
-            background-color: #9CA3AF;
-            color: #F9FAFB;
-            cursor: not-allowed;
-            opacity: 0.7;
-            transform: none;
-        }
-
-        .btn:disabled:hover {
-            background-color: #9CA3AF;
-            transform: none;
-        }
-
-        .btn:disabled:active {
-            transform: none;
-        }
-
         .error-text {
             color: var(--color-error);
             font-size: 0.875rem;
@@ -378,8 +361,6 @@
         form.addEventListener('submit', function(event) {
             event.preventDefault();
 
-            submitButton.disabled = true;
-
             const url = urlInput.value.trim();
             const match = url.match(urlPattern);
             const download = downloadCheckbox.checked;
@@ -387,7 +368,6 @@
             if (!match) {
                 urlInput.classList.add('input-error');
                 urlError.style.display = 'block';
-                submitButton.disabled = false;
                 return;
             }
 
@@ -396,6 +376,8 @@
             let apiUrl = `/doc/${docName}/${id}`;
 
             if (!download) {
+                window.onbeforeunload = function () {
+                }
                 window.location.href = apiUrl;
                 return;
             }
@@ -403,13 +385,11 @@
             downloadFile(apiUrl);
 
             form.reset();
-            submitButton.disabled = false;
         });
 
         urlInput.addEventListener('input', function() {
             urlInput.classList.remove('input-error');
             urlError.style.display = 'none';
-            submitButton.disabled = false;
         });
     });
 </script>
