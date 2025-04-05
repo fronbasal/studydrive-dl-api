@@ -49,7 +49,7 @@
             line-height: 1.5;
         }
 
-        g
+
         .container {
             width: 100%;
             max-width: 480px;
@@ -81,7 +81,6 @@
             min-height: 100%;
         }
 
-        g
         .text-center {
             text-align: center;
         }
@@ -120,7 +119,6 @@
             margin-top: 0.5rem;
         }
 
-        g
         .form-group {
             display: flex;
             flex-direction: column;
@@ -170,20 +168,20 @@
         }
 
         .btn:disabled {
-            background-color: #9CA3AF; g
-            color: #F9FAFB;       g
-            cursor: not-allowed;   g
-            opacity: 0.7;          g
-            transform: none;      g
+            background-color: #9CA3AF;
+            color: #F9FAFB;
+            cursor: not-allowed;
+            opacity: 0.7;
+            transform: none;
         }
 
         .btn:disabled:hover {
-            background-color: #9CA3AF; g
-            transform: none;           g
+            background-color: #9CA3AF;
+            transform: none;
         }
 
         .btn:disabled:active {
-            transform: none;           g
+            transform: none;
         }
 
         .error-text {
@@ -202,21 +200,21 @@
         }
 
         a {
-            color: #007bff; g
-            text-decoration: none; g
-            transition: color 0.05s; g
+            color: #007bff;
+            text-decoration: none;
+            transition: color 0.05s;
         }
 
         a:hover {
-            color: #0056b3; g
+            color: #0056b3;
         }
 
-        g
+
         a:active {
-            color: #cc3300; g
+            color: #cc3300;
         }
 
-        g
+
         .card {
             background-color: var(--color-bg-offset);
             border-radius: var(--radius);
@@ -225,7 +223,7 @@
             width: 100%;
         }
 
-        g
+
         @media (min-width: 640px) {
             .container {
                 padding: 2rem;
@@ -237,7 +235,7 @@
             }
         }
 
-        g
+
         .logo {
             animation: pulse 3s infinite;
         }
@@ -255,12 +253,12 @@
         }
 
 
-        g
+
         .switch {
             position: relative;
             display: inline-block;
-            width: 48px;  g
-            height: 24px; g
+            width: 48px;
+            height: 24px;
         }
 
         .switch input {
@@ -278,14 +276,14 @@
             bottom: 0;
             background-color: #ccc;
             transition: .4s;
-            border-radius: 24px; g
+            border-radius: 24px;
         }
 
         .slider:before {
             position: absolute;
             content: "";
             height: 16px;
-            width: 16px; 
+            width: 16px;
             left: 4px;
             bottom: 4px;
             background-color: white;
@@ -302,16 +300,16 @@
         }
 
         input:checked + .slider:before {
-            transform: translateX(24px); 
+            transform: translateX(24px);
         }
 
         .form-group.inline-switch {
             flex-direction: row;
-            align-items: center; 
+            align-items: center;
         }
 
         .form-group.inline-switch > label {
-            margin-bottom: 0; 
+            margin-bottom: 0;
             margin-right: 1rem;
         }
     </style>
@@ -352,7 +350,7 @@
         </form>
 
         <div class="mt-2 text-gray">
-            <small>Download and view StudyDrive documents without obstacles. <a href="/docs">OpenAPI spec</a>.</small>
+            <small>Download and view StudyDrive documents without obstacles. <a href="/docs" target="_blank">OpenAPI</a>, <a href="https://github.com/fronbasal/studydrive-dl-api" target="_blank">GitHub</a>.</small>
         </div>
     </div>
 </div>
@@ -405,7 +403,7 @@
             downloadFile(apiUrl);
 
             form.reset();
-            submitButton.disabled = false; 
+            submitButton.disabled = false;
         });
 
         urlInput.addEventListener('input', function() {
