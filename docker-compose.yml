@@ -13,3 +13,6 @@ services:
       - STUDYDRIVE_REDIS_URL=unix:///var/run/redis/redis.sock?db=6
     env_file:
       - .env
+    deploy:
+      restart_policy:
+        condition: always
