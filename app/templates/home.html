@@ -129,7 +129,7 @@
         .input {
             display: block;
             width: 100%;
-            padding: 0.5rem 0.75rem;
+            padding: 0.5rem 0.6rem;
             border: 1px solid var(--color-border);
             border-radius: var(--radius);
             background-color: var(--color-bg);
@@ -295,6 +295,41 @@
             margin-bottom: 0;
             margin-right: 1rem;
         }
+
+        /* Styles for the clear button */
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .clear-button {
+            position: absolute;
+            right: 0.5rem;
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 50%;
+            background-color: var(--color-bg-offset);
+            border: 0;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity var(--transition);
+        }
+
+        .input:valid + .clear-button,
+        .input:not(:placeholder-shown) + .clear-button {
+            opacity: 1;
+            transition: opacity var(--transition);
+        }
+
+        .clear-button svg {
+            width: 70%;
+            height: 70%;
+        }
     </style>
 </head>
 <body class="min-h-full flex flex-col items-center justify-center">
@@ -308,16 +343,21 @@
         <form id="documentForm">
             <div class="form-group">
                 <label for="studydriveUrl" class="mb-2">StudyDrive Document URL</label>
-                <input
-                        type="url"
-                        id="studydriveUrl"
-                        name="studydriveUrl"
-                        class="input"
-                        placeholder="https://www.studydrive.net/de/doc/example/123456"
-                        autocomplete="off"
-                        required
-                        autofocus
-                >
+                <div class="input-wrapper">
+                    <input
+                            type="url"
+                            id="studydriveUrl"
+                            name="studydriveUrl"
+                            class="input"
+                            placeholder="https://www.studydrive.net/de/doc/example/123456"
+                            autocomplete="off"
+                            required
+                            autofocus
+                    >
+                    <button type="reset" class="clear-button" onclick="clearInput()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
                 <div id="urlError" class="error-text">Please enter a valid StudyDrive URL</div>
             </div>
 
@@ -356,6 +396,11 @@
             link.click();
 
             link.parentNode.removeChild(link);
+        }
+        window.clearInput = function() {
+            document.getElementById('studydriveUrl').value = '';
+            const input = document.getElementById('studydriveUrl');
+            input.focus();
         }
 
         form.addEventListener('submit', function(event) {
