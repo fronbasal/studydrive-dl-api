@@ -2,20 +2,29 @@ import io
 import json
 import logging
 import re
-from typing import Dict, TypedDict, Optional, Callable, Coroutine, Any, AsyncGenerator
+from io import BytesIO
+from typing import (
+    Dict,
+    TypedDict,
+    Optional,
+    Callable,
+    Coroutine,
+    Any,
+    AsyncGenerator,
+    BinaryIO,
+)
 from contextlib import asynccontextmanager
 from functools import wraps
 
 import httpx
-import redis.asyncio as redis
-from fastapi import FastAPI, HTTPException, Path, Request
+from fastapi import FastAPI, HTTPException, Path, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
-from redis import RedisError
 
 from app.auth import get_session_manager, SessionManager
 from app.config import get_config, Config
 
+from minio import Minio
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -26,10 +35,8 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await initialize_redis()
+    initialize_minio()
     yield
-    if services["redis"]:
-        await services["redis"].aclose()
 
 
 app = FastAPI(
@@ -45,39 +52,46 @@ templates = Jinja2Templates(directory="app/templates")
 class ServicesDict(TypedDict):
     config: Config
     session: SessionManager
-    redis: Optional[redis.Redis]
+    minio: Optional[Minio]
 
 
 services: ServicesDict = {
     "config": get_config(),
     "session": get_session_manager(),
-    "redis": None,
+    "minio": None,
 }
 
 
-async def initialize_redis():
+def initialize_minio():
     try:
-        if services["config"].redis_url:
-            redis_client = redis.from_url(
-                services["config"].redis_url, decode_responses=False
-            )
+        if not services["config"].s3_endpoint:
+            logger.warning("S3 endpoint not configured, skipping Minio initialization.")
+            return
+        if not services["config"].s3_access_key or not services["config"].s3_secret_key:
+            raise ValueError("S3 access key or secret key not provided")
+        if not services["config"].s3_bucket:
+            raise ValueError("S3 bucket name not provided")
 
-            try:
-                await redis_client.ping()
-                logger.info("Redis connection successful.")
-            except ConnectionError as e:
-                logger.error(f"Failed to ping Redis: {e}")
-                services["redis"] = None
-                return
+        minio_client = Minio(
+            endpoint=services["config"].s3_endpoint,
+            secure=services["config"].s3_secure,
+            region=services["config"].s3_region,
+            access_key=services["config"].s3_access_key,
+            secret_key=services["config"].s3_secret_key,
+        )
+        bucket_name = services["config"].s3_bucket
 
-            logger.info("Connected to Redis successfully.")
-            services["redis"] = redis_client
+        found = minio_client.bucket_exists(bucket_name)
+        if not found:
+            logger.warning(f"Bucket {bucket_name} does not exist. Creating...")
+            minio_client.make_bucket(bucket_name)
 
-        else:
-            logger.warning("Redis URL not configured.  Caching disabled.")
+        services["minio"] = minio_client
+        logger.info("Minio client initialized successfully.")
+
     except Exception as e:
-        logger.error("Failed to connect to Redis: %s", e)
-        services["redis"] = None
+        logger.error(f"Failed to initialize Minio client: {e}")
+        services["minio"] = None
 
 
 async def fetch_preview_url(name: str, doc_id: str, cookies: Dict[str, str]) -> str:
@@ -85,14 +99,13 @@ async def fetch_preview_url(name: str, doc_id: str, cookies: Dict[str, str]) -> 
     Fetches the document page and extracts the PDF preview URL.
     Handles errors related to fetching the page or finding the URL.
     """
-    url = f"https://www.studydrive.net/en/doc/{name}/{doc_id}"
+    url = f"https://www.studydrive.net/de/doc/{name}/{doc_id}"
     async with httpx.AsyncClient(
         cookies=cookies,
         follow_redirects=True,
         timeout=30.0,
     ) as client:
         try:
-
             logger.debug(f"Fetching document page: {url}")
             response = await client.get(url)
             response.raise_for_status()
@@ -187,65 +200,94 @@ async def fetch_pdf_content(
 
 def cache(prefix: str):
     """
-    Cache decorator that caches the streaming response.  The cache will store
-    PDF data in chunks.
+    Cache decorator that caches the content to Minio S3 using BackgroundTasks.
+    This version addresses the RuntimeWarning and ensures the PDF data
+    is properly captured. While still recognizing underlying IO may block the tread.
     """
 
-    def decorator(func: Callable[..., Coroutine[any, any, StreamingResponse]]):
+    def decorator(func: Callable[..., Coroutine[Any, Any, StreamingResponse]]):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             name = kwargs.get("name")
             doc_id = kwargs.get("doc_id")
             download = kwargs.get("download", False)
-            cache_key = f"{prefix}:{name}:{doc_id}"
+            background_tasks: BackgroundTasks = kwargs.get("background_tasks")
+            object_name = f"{prefix}/{name}/{doc_id}.pdf"
+            bucket_name = services["config"].s3_bucket
 
-            if not services.get("redis"):
-                logger.warning("Redis not configured, skipping cache.")
+            if not services.get("minio"):
+                logger.warning("Minio not configured, skipping cache.")
                 return await func(*args, **kwargs)
+
+            minio_client = services["minio"]
 
             try:
-
-                cached_generator = await services["redis"].get(cache_key)
-                if cached_generator:
-                    logger.info(f"Cache hit for {cache_key}")
-
-                else:
-                    logger.info(f"Cache miss with {cache_key} going to source")
-                    response: StreamingResponse = await func(*args, **kwargs)
-
-                    async def stream_and_cache():
-                        try:
-                            async for chunk in response.body_iterator:
-
-                                await services["redis"].append(cache_key, chunk)
-                                yield chunk
-                        except Exception as e:
-                            logger.error("problem setting value")
-                            raise e
-                        finally:
-
-                            await services["redis"].expire(
-                                cache_key, services["config"].cache_ttl
-                            )
+                try:
+                    minio_client.stat_object(bucket_name, object_name)
+                    logger.info(f"Cache hit for {object_name}")
+                    obj = minio_client.get_object(bucket_name, object_name)
 
                     return StreamingResponse(
-                        stream_and_cache(),
+                        obj.stream(),
                         media_type="application/pdf",
-                        headers=response.headers,
+                        headers={
+                            "Content-Disposition": f'{"attachment" if download else "inline"}; filename="{name}-{doc_id}.pdf"'
+                        },
                     )
 
-                return StreamingResponse(
-                    io.BytesIO(cached_generator),
-                    status_code=200,
+                except (
+                    Exception
+                ):  # More general exception required as stat_object exception is vague
+                    logger.info(f"Cache miss with {object_name} going to source")
+
+                response: StreamingResponse = await func(*args, **kwargs)
+                # Use io.BytesIO as an in-memory file to buffer chunks
+                pdf_buffer = io.BytesIO()
+
+                async def generate():
+                    try:
+                        async for chunk in response.body_iterator:
+                            pdf_buffer.write(chunk)  # Accumulate chunk into the buffer
+                            yield chunk  # Pass the chunk through to the client
+
+                    except Exception as e:
+                        logger.error(f"Error streaming content: {e}")
+                        raise
+
+                # This executes the stream *and* collects all the data into pdf_buffer
+                streaming_response = StreamingResponse(
+                    generate(),
                     media_type="application/pdf",
-                    headers={
-                        "Content-Disposition": f'{"attachment" if download else "inline"}; filename="{name}-{doc_id}.pdf"'
-                    },
+                    headers=response.headers,
                 )
 
-            except RedisError as e:
-                logger.error(f"Redis error: {e}")
-                return await func(*args, **kwargs)
+                # Define the upload function
+                async def upload_to_s3(data: io.BytesIO, bucket: str, object_name: str):
+                    try:
+                        data_length = data.getbuffer().nbytes
+                        data.seek(0)  # Reset buffer position to the beginning
+                        logger.info(
+                            f"Uploading object {object_name} to bucket {bucket} with size {data_length / 1024:.2f} KB"
+                        )
+                        minio_client.put_object(bucket, object_name, data, data_length)
+                        logger.info(f"Successfully cached {object_name} in Minio")
+                    except Exception as s3_err:
+                        logger.error(f"Error uploading to S3: {s3_err}")
+
+                # After sending, schedule the upload task
+                async def upload_after_response(
+                    final_buffer: io.BytesIO, b_tasks: BackgroundTasks
+                ):
+
+                    b_tasks.add_task(
+                        upload_to_s3, final_buffer, bucket_name, object_name
+                    )
+
+                await upload_after_response(
+                    pdf_buffer, background_tasks
+                )  # schedule background task.
+                return streaming_response
+
             except HTTPException as e:
                 raise e
             except Exception as e:
@@ -269,16 +311,15 @@ def cache(prefix: str):
         500: {"description": "Internal server error"},
     },
 )
-@cache(prefix="pdf_content")
+@cache(prefix="")
 async def get_document(
     name: str,
     doc_id: str = Path(..., regex=r"^\d+$"),
     download: bool = False,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
 ):
-
     authenticated, auth_error = await services["session"].ensure_authenticated()
     if not authenticated:
-
         raise HTTPException(
             status_code=401, detail=f"Authentication failed: {auth_error}"
         )

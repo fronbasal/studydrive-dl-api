@@ -9,9 +9,14 @@ class Config:
     password: str = os.getenv("STUDYDRIVE_PASSWORD", "")
 
     host: str = os.getenv("STUDYDRIVE_HOST", "127.0.0.1")
-    port: int = int(os.getenv("STUDYDRIVE_PORT", 8040))
+    port: int = int(os.getenv("STUDYDRIVE_PORT", 8000))
 
-    redis_url: Optional[str] = os.getenv("STUDYDRIVE_REDIS_URL")
+    s3_endpoint: str = os.getenv("STUDYDRIVE_S3_ENDPOINT", "")
+    s3_secure: bool = bool(os.getenv("STUDYDRIVE_S3_SECURE", True))
+    s3_region: str = os.getenv("STUDYDRIVE_S3_REGION", "us-east-1")
+    s3_access_key: str = os.getenv("STUDYDRIVE_S3_ACCESS_KEY", "")
+    s3_secret_key: str = os.getenv("STUDYDRIVE_S3_SECRET_KEY", "")
+    s3_bucket: str = os.getenv("STUDYDRIVE_S3_BUCKET", "")
 
     cache_ttl: int = int(os.getenv("STUDYDRIVE_CACHE_TTL", 7 * 24 * 60 * 60))
 
