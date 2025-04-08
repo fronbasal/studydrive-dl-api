@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8040:8000"
+      - "127.0.0.1:8040:8000"
     volumes:
       - /run/redis/redis.sock:/var/run/redis/redis.sock
     environment:
