@@ -6,7 +6,6 @@
     <title>ShitDrive - StudyDrive Document Proxy</title>
     <meta name="description" content="Access StudyDrive documents easily">
 
-    <!-- Modern CSS Reset + Tailwind-like Utility Classes -->
     <style>
         *, *::before, *::after {
             box-sizing: border-box;
@@ -236,7 +235,6 @@
         }
 
 
-
         .switch {
             position: relative;
             display: inline-block;
@@ -355,7 +353,10 @@
                             autofocus
                     >
                     <button type="reset" class="clear-button" onclick="clearInput()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
                     </button>
                 </div>
                 <div id="urlError" class="error-text">Please enter a valid StudyDrive URL</div>
@@ -397,13 +398,14 @@
 
             link.parentNode.removeChild(link);
         }
-        window.clearInput = function() {
+
+        window.clearInput = function () {
             document.getElementById('studydriveUrl').value = '';
             const input = document.getElementById('studydriveUrl');
             input.focus();
         }
 
-        form.addEventListener('submit', function(event) {
+        form.addEventListener('submit', function (event) {
             event.preventDefault();
 
             const url = urlInput.value.trim();
@@ -432,7 +434,7 @@
             form.reset();
         });
 
-        urlInput.addEventListener('input', function() {
+        urlInput.addEventListener('input', function () {
             urlInput.classList.remove('input-error');
             urlError.style.display = 'none';
         });

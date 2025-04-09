@@ -1,10 +1,8 @@
 import logging
-import re
 import time
 from typing import Dict, Optional, Tuple
 
 import httpx
-from fastapi import HTTPException
 
 from app.config import get_config
 

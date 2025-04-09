@@ -2,7 +2,8 @@ import io
 import json
 import logging
 import re
-from io import BytesIO
+from contextlib import asynccontextmanager
+from functools import wraps
 from typing import (
     Dict,
     TypedDict,
@@ -11,20 +12,16 @@ from typing import (
     Coroutine,
     Any,
     AsyncGenerator,
-    BinaryIO,
 )
-from contextlib import asynccontextmanager
-from functools import wraps
 
 import httpx
 from fastapi import FastAPI, HTTPException, Path, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
+from minio import Minio
 
 from app.auth import get_session_manager, SessionManager
 from app.config import get_config, Config
-
-from minio import Minio
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
