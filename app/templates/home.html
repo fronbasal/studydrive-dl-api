@@ -390,7 +390,7 @@
 
         function downloadFile(url) {
             const link = document.createElement('a');
-            link.href = url + '&download=true';
+            link.href = url + '?download=true';
             link.setAttribute('download', '');
             document.body.appendChild(link);
 
