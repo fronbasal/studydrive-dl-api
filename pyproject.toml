@@ -4,13 +4,14 @@ version = "0.1.0"
 description = ""
 authors = ["Daniel Malik <mail@fronbasal.de>"]
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.13"
-fastapi = "^0.115.12"
-uvicorn = "^0.34.0"
+fastapi = "^0.116.0"
+uvicorn = "^0.35.0"
 httpx = "^0.28.1"
-python-dotenv = "^1.1.0"
+python-dotenv = "^1.1.1"
 jinja2 = "^3.1.6"
 minio = "^7.2.15"
 

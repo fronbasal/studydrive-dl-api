@@ -29,20 +29,6 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    initialize_minio()
-    yield
-
-
-app = FastAPI(
-    title="ShitDrive API",
-    description="Exposes a single API endpoint to download StudyDrive PDF documents without signing up.",
-    version="0.1.0",
-    lifespan=lifespan,
-)
-
 templates = Jinja2Templates(directory="app/templates")
 
 
@@ -57,6 +43,12 @@ services: ServicesDict = {
     "session": get_session_manager(),
     "minio": None,
 }
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    initialize_minio()
+    yield
 
 
 def initialize_minio():
@@ -89,6 +81,14 @@ def initialize_minio():
     except Exception as e:
         logger.error(f"Failed to initialize Minio client: {e}")
         services["minio"] = None
+
+
+app = FastAPI(
+    title="ShitDrive API",
+    description="Exposes a single API endpoint to download StudyDrive PDF documents without signing up.",
+    version="0.1.0",
+    lifespan=lifespan,
+)
 
 
 async def fetch_preview_url(name: str, doc_id: str, cookies: Dict[str, str]) -> str:
@@ -275,7 +275,11 @@ def cache(prefix: str):
                 async def upload_after_response(
                     final_buffer: io.BytesIO, b_tasks: BackgroundTasks
                 ):
-
+                    if not b_tasks:
+                        logger.warning(
+                            "BackgroundTasks not provided, cannot schedule upload."
+                        )
+                        return
                     b_tasks.add_task(
                         upload_to_s3, final_buffer, bucket_name, object_name
                     )
@@ -311,10 +315,10 @@ def cache(prefix: str):
 @cache(prefix="")
 async def get_document(
     name: str,
+    background_tasks: BackgroundTasks,
     doc_id: str = Path(..., regex=r"^\d+$"),
     download: bool = False,
-    background_tasks: BackgroundTasks = BackgroundTasks(),
-):
+) -> StreamingResponse:
     authenticated, auth_error = await services["session"].ensure_authenticated()
     if not authenticated:
         raise HTTPException(
