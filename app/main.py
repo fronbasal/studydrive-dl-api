@@ -12,10 +12,12 @@ from typing import (
     Coroutine,
     Any,
     AsyncGenerator,
+    Annotated,
 )
 
 import httpx
 from fastapi import FastAPI, HTTPException, Path, Request, BackgroundTasks
+from fastapi.params import Query
 from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
 from minio import Minio
@@ -85,7 +87,7 @@ def initialize_minio():
 
 app = FastAPI(
     title="ShitDrive API",
-    description="Exposes a single API endpoint to download StudyDrive PDF documents without signing up.",
+    description="Exposes a single API endpoint to download StudyDrive PDF documents.",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -302,10 +304,15 @@ def cache(prefix: str):
 
 @app.get(
     "/doc/{name}/{doc_id}",
-    description="Retrieve a PDF document from StudyDrive",
+    description="Retrieve a PDF document from StudyDrive. Returns a PDF file if available, or a non-OK status if the document is not found or access is restricted. The URL formatting is designed to match the original StudyDrive URLs. Strip the language prefix (e.g., 'en' or 'de') and swap the host to retrieve your desired document.",
+    summary="Retrieve PDF Document",
+    name="get_document",
     tags=["Document"],
+    operation_id="get_document",
+    response_class=StreamingResponse,
     responses={
-        200: {"description": "PDF document"},
+        200: {"description": "PDF document", "content": {"application/pdf": {}}},
+        400: {"description": "Bad request, invalid parameters"},
         401: {"description": "Authentication failed"},
         403: {"description": "Teaser received instead of document"},
         404: {"description": "Document not found"},
@@ -314,10 +321,29 @@ def cache(prefix: str):
 )
 @cache(prefix="")
 async def get_document(
-    name: str,
+    name: Annotated[
+        str,
+        Path(
+            title="Name",
+            description="Document name (slug), as found in the original URL",
+        ),
+    ],
     background_tasks: BackgroundTasks,
-    doc_id: str = Path(..., regex=r"^\d+$"),
-    download: bool = False,
+    doc_id: Annotated[
+        str,
+        Path(
+            title="Document ID",
+            description="Document ID (numeric), as found in the original URL",
+            regex=r"^\d+$",
+        ),
+    ],
+    download: Annotated[
+        bool,
+        Query(
+            title="Download Document",
+            description='Controls the "Content-Disposition" header.',
+        ),
+    ] = False,
 ) -> StreamingResponse:
     authenticated, auth_error = await services["session"].ensure_authenticated()
     if not authenticated:
